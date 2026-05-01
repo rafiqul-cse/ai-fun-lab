@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyQuiz — AI-Powered Quiz Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0e0e0e;
+    --paper: #f5f0e8;
+    --accent: #c84b2f;
+    --accent2: #2f5fc8;
+    --muted: #8a8070;
+    --rule: #d4cdc0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, var(--rule) 27px, var(--rule) 28px);
+    background-attachment: fixed;
+  }
+
+  .font-display { font-family: 'Playfair Display', serif; }
+  .font-mono { font-family: 'DM Mono', monospace; }
+
+  .paper-card {
+    background: #fdfaf4;
+    border: 1px solid var(--rule);
+    box-shadow: 4px 4px 0 var(--rule), 8px 8px 0 #e8e0d0;
+  }
+
+  textarea {
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    width: 100%;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 28px;
+    color: var(--ink);
+    caret-color: var(--accent);
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .btn-outline:hover {
+    background: var(--ink);
+    color: var(--paper);
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--muted);
+  }
+
+  .option-btn {
+    background: #fdfaf4;
+    border: 2px solid var(--rule);
+    text-align: left;
+    width: 100%;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    position: relative;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: #f0f4ff;
+    transform: translateX(4px);
+  }
+  .option-btn.selected {
+    border-color: var(--accent2);
+    background: #e8eeff;
+  }
+  .option-btn.correct {
+    border-color: #2a7a3b;
+    background: #e6f4ea;
+    color: #1a5c2b;
+  }
+  .option-btn.wrong {
+    border-color: var(--accent);
+    background: #fdecea;
+    color: #8b1a0a;
+  }
+  .option-btn:disabled { cursor: default; }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--rule);
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--rule);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fade-in { animation: fadeIn 0.3s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stamp {
+    border: 3px solid var(--accent);
+    color: var(--accent);
+    display: inline-block;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transform: rotate(-2deg);
+    font-weight: 500;
+  }
+
+  .result-badge {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    border: 3px solid var(--ink);
+  }
+
+  #api-key-input {
+    background: transparent;
+    border: 2px solid var(--rule);
+    border-radius: 0;
+    padding: 10px 14px;
+    width: 100%;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #api-key-input:focus { border-color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="border-b-2 border-[var(--ink)] bg-[#fdfaf4] sticky top-0 z-50">
+  <div class="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <span class="font-display text-2xl font-black tracking-tight">StudyQuiz</span>
+      <span class="stamp">AI-Powered</span>
+    </div>
+    <span class="font-mono text-xs text-[var(--muted)]">powered by Groq</span>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-6 py-10">
+
+  <!-- Input Section -->
+  <div id="input-section">
+    <div class="mb-8">
+      <h1 class="font-display text-5xl font-black leading-tight mb-3">
+        Turn Notes<br><span class="text-[var(--accent)]">Into Quizzes.</span>
+      </h1>
+      <p class="text-[var(--muted)] font-light text-lg">Paste your study notes below and generate 5 multiple-choice questions instantly.</p>
+    </div>
+
+    <!-- Notes Textarea -->
+    <div class="paper-card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <label class="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">Study Notes</label>
+        <span id="char-count" class="font-mono text-xs text-[var(--muted)]">0 chars</span>
+      </div>
+      <div style="border-top: 1px solid var(--rule); padding-top: 8px;">
+        <textarea id="notes-input" rows="14" placeholder="Paste your lecture notes, textbook excerpts, or any study material here...
+
+Example: The mitochondria is the powerhouse of the cell. It generates ATP through cellular respiration. The process involves glycolysis, the Krebs cycle, and the electron transport chain..."></textarea>
+      </div>
+    </div>
+
+    <button id="generate-btn" class="btn-primary w-full py-4 text-sm">
+      ⚡ Generate Quiz
+    </button>
+
+    <div id="error-msg" class="hidden mt-4 border-2 border-[var(--accent)] p-4 font-mono text-sm text-[var(--accent)]"></div>
+  </div>
+
+  <!-- Loading Section -->
+  <div id="loading-section" class="hidden text-center py-20">
+    <div class="spinner mx-auto mb-6" style="width:40px;height:40px;border-width:3px;"></div>
+    <p class="font-display text-2xl font-bold mb-2">Crafting your quiz…</p>
+    <p class="font-mono text-sm text-[var(--muted)]">Analysing notes & generating questions</p>
+  </div>
+
+  <!-- Quiz Section -->
+  <div id="quiz-section" class="hidden">
+    <!-- Progress -->
+    <div class="flex items-center justify-between mb-4">
+      <span class="font-mono text-xs text-[var(--muted)] uppercase tracking-widest">Question <span id="q-current">1</span> of <span id="q-total">5</span></span>
+      <button onclick="resetAll()" class="font-mono text-xs text-[var(--muted)] underline cursor-pointer bg-transparent border-none">← New Quiz</button>
+    </div>
+    <div class="progress-bar mb-8">
+      <div class="progress-fill" id="progress-fill" style="width:20%"></div>
+    </div>
+
+    <!-- Question Card -->
+    <div id="question-card" class="paper-card p-8 mb-6 fade-in">
+      <p class="font-mono text-xs text-[var(--muted)] uppercase tracking-widest mb-3">Question</p>
+      <p id="question-text" class="font-display text-xl font-bold leading-snug mb-8"></p>
+
+      <div id="options-list" class="flex flex-col gap-3"></div>
+
+      <div id="feedback-box" class="hidden mt-6 border-l-4 pl-4 py-2">
+        <p id="feedback-text" class="font-mono text-sm"></p>
+        <p id="explanation-text" class="text-sm text-[var(--muted)] mt-1 font-light"></p>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button id="check-btn" class="btn-primary flex-1 py-3 text-sm" onclick="checkAnswer()">Check Answer</button>
+      <button id="next-btn" class="btn-outline hidden flex-1 py-3 text-sm" onclick="nextQuestion()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div id="results-section" class="hidden fade-in">
+    <div class="paper-card p-10 text-center">
+      <div id="result-badge" class="result-badge mx-auto mb-6"></div>
+      <h2 class="font-display text-4xl font-black mb-2">Quiz Complete!</h2>
+      <p id="score-text" class="font-mono text-sm text-[var(--muted)] mb-8"></p>
+      <div id="results-breakdown" class="text-left mb-8 space-y-3"></div>
+      <button onclick="resetAll()" class="btn-primary px-10 py-3">← Try Again</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// 🔑 PUT YOUR GROQ API KEY BELOW (replace the placeholder)
+// Get your FREE key at: https://console.groq.com
+const GROQ_API_KEY = "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";
+// ============================================================
+
+let questions = [];
+let currentIndex = 0;
+let selectedOption = null;
+let answered = false;
+let scores = [];
+
+const notesInput = document.getElementById('notes-input');
+const charCount = document.getElementById('char-count');
+const generateBtn = document.getElementById('generate-btn');
+const errorMsg = document.getElementById('error-msg');
+
+notesInput.addEventListener('input', () => {
+  charCount.textContent = notesInput.value.length + ' chars';
+});
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.classList.remove('hidden');
+}
+
+function hideError() {
+  errorMsg.classList.add('hidden');
+}
+
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+async function generateQuiz() {
+  const notes = notesInput.value.trim();
+  const apiKey = GROQ_API_KEY;
+
+  if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') { showError('Please open the HTML file and replace YOUR_GROQ_API_KEY_HERE with your actual Groq API key from console.groq.com'); return; }
+  if (notes.length < 50) { showError('Please paste at least 50 characters of study notes.'); return; }
+
+  hideError();
+  hide('input-section');
+  show('loading-section');
+
+  const prompt = `You are an expert quiz maker. Based on the following study notes, generate exactly 5 multiple-choice questions to test understanding.
+
+STUDY NOTES:
+${notes}
+
+Return ONLY a valid JSON array (no markdown, no explanation, no code fences) in this exact format:
+[
+  {
+    "question": "Question text here?",
+    "options": ["A) Option one", "B) Option two", "C) Option three", "D) Option four"],
+    "correct": 0,
+    "explanation": "Brief explanation of why this is correct."
+  }
+]
+
+Rules:
+- "correct" is the 0-based index of the correct option in the options array
+- Make questions genuinely test understanding, not just memorization
+- Distractors should be plausible but clearly wrong
+- Keep questions concise and clear`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = (data.choices?.[0]?.message?.content || '').trim();
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Could not parse quiz response. Try again.');
+
+    questions = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(questions) || questions.length === 0) throw new Error('No questions returned.');
+
+    currentIndex = 0;
+    scores = [];
+    hide('loading-section');
+    show('quiz-section');
+    renderQuestion();
+
+  } catch(e) {
+    hide('loading-section');
+    show('input-section');
+    showError('Error: ' + e.message);
+  }
+}
+
+function renderQuestion() {
+  const q = questions[currentIndex];
+  selectedOption = null;
+  answered = false;
+
+  document.getElementById('q-current').textContent = currentIndex + 1;
+  document.getElementById('q-total').textContent = questions.length;
+  document.getElementById('progress-fill').style.width = ((currentIndex + 1) / questions.length * 100) + '%';
+  document.getElementById('question-text').textContent = q.question;
+
+  const optList = document.getElementById('options-list');
+  optList.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => selectOption(i);
+    optList.appendChild(btn);
+  });
+
+  const feedbackBox = document.getElementById('feedback-box');
+  feedbackBox.classList.add('hidden');
+  document.getElementById('check-btn').classList.remove('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+
+  // Re-trigger fade animation
+  const card = document.getElementById('question-card');
+  card.classList.remove('fade-in');
+  void card.offsetWidth;
+  card.classList.add('fade-in');
+}
+
+function selectOption(i) {
+  if (answered) return;
+  selectedOption = i;
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((b, idx) => {
+    b.classList.toggle('selected', idx === i);
+  });
+}
+
+function checkAnswer() {
+  if (selectedOption === null) {
+    const feedbackBox = document.getElementById('feedback-box');
+    feedbackBox.className = 'mt-6 border-l-4 pl-4 py-2 border-[var(--muted)]';
+    feedbackBox.classList.remove('hidden');
+    document.getElementById('feedback-text').textContent = 'Please select an answer first.';
+    document.getElementById('feedback-text').style.color = 'var(--muted)';
+    document.getElementById('explanation-text').textContent = '';
+    return;
+  }
+
+  answered = true;
+  const q = questions[currentIndex];
+  const correct = q.correct;
+  const btns = document.querySelectorAll('.option-btn');
+
+  btns.forEach((b, i) => {
+    b.disabled = true;
+    b.classList.remove('selected');
+    if (i === correct) b.classList.add('correct');
+    else if (i === selectedOption && i !== correct) b.classList.add('wrong');
+  });
+
+  const isCorrect = selectedOption === correct;
+  scores.push(isCorrect);
+
+  const feedbackBox = document.getElementById('feedback-box');
+  feedbackBox.classList.remove('hidden');
+
+  if (isCorrect) {
+    feedbackBox.className = 'mt-6 border-l-4 pl-4 py-2 border-green-500';
+    document.getElementById('feedback-text').textContent = '✓ Correct!';
+    document.getElementById('feedback-text').style.color = '#1a5c2b';
+  } else {
+    feedbackBox.className = 'mt-6 border-l-4 pl-4 py-2 border-[var(--accent)]';
+    document.getElementById('feedback-text').textContent = '✗ Incorrect — the correct answer is ' + q.options[correct];
+    document.getElementById('feedback-text').style.color = 'var(--accent)';
+  }
+  document.getElementById('explanation-text').textContent = q.explanation || '';
+
+  hide('check-btn');
+  if (currentIndex < questions.length - 1) {
+    show('next-btn');
+  } else {
+    // Last question — show finish
+    const nextBtn = document.getElementById('next-btn');
+    nextBtn.textContent = 'See Results →';
+    nextBtn.classList.remove('hidden');
+    nextBtn.onclick = showResults;
+  }
+}
+
+function nextQuestion() {
+  currentIndex++;
+  renderQuestion();
+  document.getElementById('next-btn').textContent = 'Next →';
+  document.getElementById('next-btn').onclick = nextQuestion;
+}
+
+function showResults() {
+  hide('quiz-section');
+  show('results-section');
+
+  const correct = scores.filter(Boolean).length;
+  const pct = Math.round(correct / questions.length * 100);
+
+  const badge = document.getElementById('result-badge');
+  badge.textContent = pct + '%';
+  if (pct >= 80) { badge.style.background = '#e6f4ea'; badge.style.color = '#1a5c2b'; badge.style.borderColor = '#2a7a3b'; }
+  else if (pct >= 50) { badge.style.background = '#fff8e1'; badge.style.color = '#7a5c00'; badge.style.borderColor = '#c9a227'; }
+  else { badge.style.background = '#fdecea'; badge.style.color = '#8b1a0a'; badge.style.borderColor = 'var(--accent)'; }
+
+  document.getElementById('score-text').textContent = correct + ' of ' + questions.length + ' correct — ' +
+    (pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort, keep studying!' : 'Keep reviewing your notes!');
+
+  const breakdown = document.getElementById('results-breakdown');
+  breakdown.innerHTML = '';
+  questions.forEach((q, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-start gap-3 p-3 border border-[var(--rule)]';
+    row.innerHTML = `
+      <span class="font-mono text-xs mt-0.5 ${scores[i] ? 'text-green-600' : 'text-[var(--accent)]'} font-bold">${scores[i] ? '✓' : '✗'}</span>
+      <div>
+        <p class="text-sm font-medium leading-snug">${q.question}</p>
+        ${!scores[i] ? `<p class="font-mono text-xs text-[var(--muted)] mt-1">Correct: ${q.options[q.correct]}</p>` : ''}
+      </div>
+    `;
+    breakdown.appendChild(row);
+  });
+}
+
+function resetAll() {
+  questions = []; currentIndex = 0; scores = []; selectedOption = null; answered = false;
+  hide('quiz-section'); hide('results-section'); hide('loading-section');
+  show('input-section');
+  hideError();
+}
+
+generateBtn.addEventListener('click', generateQuiz);
+
+// Allow Ctrl+Enter to generate
+notesInput.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') generateQuiz();
+});
+</script>
+</body>
+</html>

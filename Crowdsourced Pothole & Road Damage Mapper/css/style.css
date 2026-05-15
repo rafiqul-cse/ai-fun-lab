@@ -120,9 +120,16 @@ button{font-family:'Hind Siliguri',sans-serif;}
 /* ─── PAGES ──────────────────────────────────────────────────────────────── */
 .page{display:none;}
 .page.active{display:block;}
-#map-page{height:calc(100vh - 62px);display:none;flex-direction:column;}
-#map-page.active{display:flex;}
-#map{flex:1;}
+#map-page {
+    height: calc(100vh - 70px); /* Adjust based on your nav height */
+    width: 100%;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    background: #0f0f1a; /* Matches your theme color */
+}
 
 /* ─── SOCIAL FEED PAGE ───────────────────────────────────────────────────── */
 #feed-page{max-width:680px;margin:0 auto;padding:20px 16px;}

@@ -42,23 +42,20 @@ async function getIssueById(id) {
 
 /** Adds a new issue to the cloud */
 async function addIssue(issue) {
+  // Use .from() - double check the spelling!
   const { data, error } = await supabase
-    .from('issues')
+    .from('issues') 
     .insert([{
       type: issue.type,
       description: issue.desc,
       lat: issue.lat,
       lng: issue.lng,
       status: 'pending',
-      area: issue.area || 'Barishal',
-      reporter: issue.reporter,
-      major: issue.major,
-      votes: 0
-    }])
-    .select();
+      area: issue.area || 'Barishal'
+    }]);
 
   if (error) throw error;
-  return data[0];
+  return data;
 }
 
 /** Updates status in the cloud */

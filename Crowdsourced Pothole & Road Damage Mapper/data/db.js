@@ -26,15 +26,13 @@ function saveIssues(data)   { _save(KEYS.ISSUES, data); }
 
 function getIssueById(id)   { return loadIssues().find(i => i.id === id) || null; }
 
-function addIssue(issue) {
-  const issues = loadIssues();
-  issue.id = Date.now();
-  issue.votes = 0;
-  issue.date = new Date().toISOString();
-  issue.status = 'pending';
-  issues.push(issue);
-  saveIssues(issues);
-  return issue;
+async function addIssueToCloud(issueData) {
+  const { data, error } = await supabase
+    .from('issues')
+    .insert([issueData]);
+
+  if (error) console.error('Error saving:', error);
+  else console.log('Saved to cloud!', data);
 }
 
 function updateIssueStatus(id, status) {

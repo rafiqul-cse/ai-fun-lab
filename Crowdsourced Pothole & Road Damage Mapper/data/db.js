@@ -26,13 +26,25 @@ function saveIssues(data)   { _save(KEYS.ISSUES, data); }
 
 function getIssueById(id)   { return loadIssues().find(i => i.id === id) || null; }
 
-async function addIssueToCloud(issueData) {
+async function addIssue(issue) {
   const { data, error } = await supabase
     .from('issues')
-    .insert([issueData]);
+    .insert([{
+      type: issue.type,
+      description: issue.desc,
+      lat: issue.lat,
+      lng: issue.lng,
+      status: 'pending',
+      area: issue.area || 'Barishal',
+      reporter: issue.reporter
+    }])
+    .select();
 
-  if (error) console.error('Error saving:', error);
-  else console.log('Saved to cloud!', data);
+  if (error) {
+    console.error("Supabase Error:", error.message);
+    throw error;
+  }
+  return data[0];
 }
 
 function updateIssueStatus(id, status) {

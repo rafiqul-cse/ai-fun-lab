@@ -10,16 +10,25 @@ let pendingLatLng = null;
 
 function initMap() {
   if (map) { 
-    setTimeout(() => map.invalidateSize(), 150); 
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 200); 
     return; 
   }
+  
   map = L.map('map').setView([22.7010, 90.3535], 14);
+  
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(map);
-  
-  renderMapMarkers();
+
+  // Force Leaflet to recalculate the container size
+  setTimeout(() => {
+    map.invalidateSize();
+    renderMapMarkers();
+  }, 300);
+
   map.on('click', onMapClick);
 }
 

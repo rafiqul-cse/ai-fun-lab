@@ -3,10 +3,12 @@
  * Fixed for Supabase Integration
  */
 
-// 1. Initialize Supabase (Ensure these are in your index.html or at the top)
-// const supabaseUrl = 'YOUR_URL';
-// const supabaseKey = 'YOUR_KEY';
-// const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+// Make sure 'supabase' is lowercase and matches your function calls
+const supabaseUrl = 'https://your-project-id.supabase.co';
+const supabaseKey = 'xgpjpzxnpmmwwjavpfhr';
+
+// Ensure this variable name is EXACTLY 'supabase'
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // ─── Issues ──────────────────────────────────────────────────────────────────
 

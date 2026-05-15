@@ -112,19 +112,29 @@ function submitReport() {
   let photoData = null;
   const reader = new FileReader();
 
-  const finalize = () => {
+  // Change this line to include 'async'
+const finalize = async () => { 
     const user = getCurrentUser();
-    const issue = addIssue({
-      type, desc,
-      lat: pendingLatLng.lat,
-      lng: pendingLatLng.lng,
-      major,
-      reporter   : user.name,
-      reporterId : user.id,
-      reporterEmail: user.email,
-      area       : user.area || '',
-      photo      : photoData,
-    });
+    
+    // Add 'await' before addIssue
+    try {
+        await addIssue({
+          type, desc,
+          lat: pendingLatLng.lat,
+          lng: pendingLatLng.lng,
+          major,
+          reporter: user.name,
+          area: user.area || '',
+        });
+
+        // The rest of your existing code...
+        pendingLatLng = null;
+        closeModal('report-modal');
+        showToast('রিপোর্ট সফলভাবে জমা হয়েছে!', 'success');
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+};
     pendingLatLng = null;
     document.getElementById('r-desc').value = '';
     document.getElementById('r-photo').value = '';

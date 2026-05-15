@@ -9,12 +9,16 @@ let pinMode = false;
 let pendingLatLng = null;
 
 function initMap() {
-  if (map) { setTimeout(() => map.invalidateSize(), 150); return; }
+  if (map) { 
+    setTimeout(() => map.invalidateSize(), 150); 
+    return; 
+  }
   map = L.map('map').setView([22.7010, 90.3535], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(map);
+  
   renderMapMarkers();
   map.on('click', onMapClick);
 }
@@ -44,43 +48,43 @@ function makeIcon(status, votes) {
 }
 
 function getTypeEmoji(type, status) {
-  const map = { 'গর্ত/পটহোল':'🕳️','ভাঙা রাস্তা':'🚧','জলাবদ্ধতা':'🌊','ভাঙা স্ট্রিটলাইট':'💡','ফাটল':'⚡','ড্রেন সমস্যা':'🪣','অন্যান্য':'⚠️' };
-  return type ? (map[type] || '⚠️') : (status === 'done' ? '✅' : status === 'progress' ? '🔧' : '⚠️');
+  const emojiMap = { 'গর্ত/পটহোল':'🕳️','ভাঙা রাস্তা':'🚧','জলাবদ্ধতা':'🌊','ভাঙা স্ট্রিটলাইট':'💡','ফাটল':'⚡','ড্রেন সমস্যা':'🪣','অন্যান্য':'⚠️' };
+  return type ? (emojiMap[type] || '⚠️') : (status === 'done' ? '✅' : status === 'progress' ? '🔧' : '⚠️');
 }
 
 async function renderMapMarkers() {
-  // 1. Clear old markers
+  if (!map) return;
+  
+  // 1. Clear old markers from map
   markersLayer.forEach(m => map.removeLayer(m));
   markersLayer = [];
 
-  // 2. Fetch issues from Supabase (using the function in db.js)
+  // 2. Fetch issues from Supabase
   const issues = await loadIssues(); 
 
-  // 3. Draw markers only if we have data
   if (!issues || issues.length === 0) {
-    console.log("No issues found in Supabase yet.");
+    console.log("No issues found in Supabase.");
     return;
   }
 
+  // 3. Draw new markers
   issues.forEach(issue => {
-    // Note: Use issue.latitude/longitude based on your Supabase column names
     const marker = L.marker([issue.lat, issue.lng], {
       icon: makeIcon(issue.status, issue.votes || 0)
     }).addTo(map);
 
-    // Keep your existing popup logic here...
+    // Optional: Add popup back if you had logic for it
+    marker.bindPopup(`<b>${issue.type}</b><br>${issue.description}`);
+    
     markersLayer.push(marker);
   });
 }
 
-function filterMapMarkers(filter) {
-  renderMapMarkers(filter);
-  document.querySelectorAll('.map-filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-}
-
 function startPinMode() {
-  if (!getCurrentUser()) { showToast('প্রথমে লগইন করুন', 'error'); return; }
+  if (!getCurrentUser()) { 
+    showToast('প্রথমে লগইন করুন', 'error'); 
+    return; 
+  }
   pinMode = true;
   map.getContainer().style.cursor = 'crosshair';
   document.getElementById('pin-hint').style.display = 'flex';
@@ -95,64 +99,79 @@ function onMapClick(e) {
   map.getContainer().style.cursor = '';
   document.getElementById('pin-hint').style.display = 'none';
 
-  // Show temp marker
+  // Show temp visual marker
   const tmp = L.marker(e.latlng, {
-    icon: L.divIcon({ className:'', html:'<div style="background:#ffd60a;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>', iconSize:[24,24], iconAnchor:[12,12] })
+    icon: L.divIcon({ 
+        className:'', 
+        html:'<div style="background:#ffd60a;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>', 
+        iconSize:[24,24], 
+        iconAnchor:[12,12] 
+    })
   }).addTo(map);
+  
   setTimeout(() => map.removeLayer(tmp), 5000);
-
   document.getElementById('report-modal').classList.add('open');
 }
 
-function submitReport() {
-  if (!pendingLatLng) { showToast('মানচিত্রে একটি স্থান বেছে নিন', 'error'); return; }
+async function submitReport() {
+  if (!pendingLatLng) { 
+    showToast('মানচিত্রে একটি স্থান বেছে নিন', 'error'); 
+    return; 
+  }
+  
   const type  = document.getElementById('r-type').value;
   const desc  = document.getElementById('r-desc').value.trim();
   const major = document.getElementById('r-major').value;
-  if (!desc) { showToast('সমস্যার বিবরণ লিখুন', 'error'); return; }
+  
+  if (!desc) { 
+    showToast('সমস্যার বিবরণ লিখুন', 'error'); 
+    return; 
+  }
 
   const photoInput = document.getElementById('r-photo');
   let photoData = null;
-  const reader = new FileReader();
 
-  // Change this line to include 'async'
-const finalize = async () => { 
+  // Helper to actually send the data
+  const finalize = async (photo) => {
     const user = getCurrentUser();
     
-    // Add 'await' before addIssue
     try {
         await addIssue({
-          type, desc,
+          type, 
+          desc,
           lat: pendingLatLng.lat,
           lng: pendingLatLng.lng,
           major,
-          reporter: user.name,
-          area: user.area || '',
+          reporter: user ? user.name : 'Anonymous',
+          area: user ? (user.area || '') : '',
+          photo: photo // This would be the base64 or URL
         });
 
-        // The rest of your existing code...
+        // UI Reset
         pendingLatLng = null;
+        document.getElementById('r-desc').value = '';
+        document.getElementById('r-photo').value = '';
+        document.getElementById('photo-preview').style.display = 'none';
+        
         closeModal('report-modal');
-        showToast('রিপোর্ট সফলভাবে জমা হয়েছে!', 'success');
+        
+        // Refresh UI
+        await renderMapMarkers();
+        if (typeof renderFeed === 'function') renderFeed();
+        
+        showToast('রিপোর্ট সফলভাবে জমা হয়েছে! ধন্যবাদ 🎉', 'success');
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     }
-};
-    pendingLatLng = null;
-    document.getElementById('r-desc').value = '';
-    document.getElementById('r-photo').value = '';
-    document.getElementById('photo-preview').style.display = 'none';
-    closeModal('report-modal');
-    renderMapMarkers();
-    renderFeed();
-    showToast('রিপোর্ট সফলভাবে জমা হয়েছে! ধন্যবাদ 🎉', 'success');
   };
 
+  // Handle Photo if exists, then finalize
   if (photoInput.files[0]) {
-    reader.onload = e => { photoData = e.target.result; finalize(); };
+    const reader = new FileReader();
+    reader.onload = e => finalize(e.target.result);
     reader.readAsDataURL(photoInput.files[0]);
   } else {
-    finalize();
+    await finalize(null);
   }
 }
 
@@ -160,7 +179,10 @@ function previewPhoto(input) {
   const preview = document.getElementById('photo-preview');
   if (input.files && input.files[0]) {
     const reader = new FileReader();
-    reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+    reader.onload = e => { 
+        preview.src = e.target.result; 
+        preview.style.display = 'block'; 
+    };
     reader.readAsDataURL(input.files[0]);
   }
 }

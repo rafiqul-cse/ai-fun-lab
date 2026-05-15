@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixMyStreet বরিশাল — সড়ক সমস্যা রিপোর্ট করুন</title>
+
+<!-- External Libraries -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Tiro+Bangla:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- App Stylesheet -->
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════════════ -->
+<div id="auth-screen">
+
+  <div class="auth-logo">
+    <span class="logo-icon">🛣️</span>
+    <h1>FixMyStreet বরিশাল</h1>
+    <p>সড়ক সমস্যা রিপোর্ট করুন · নাগরিক অংশগ্রহণ</p>
+  </div>
+
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="switchAuthTab('login')">লগইন</div>
+    <div class="auth-tab" onclick="switchAuthTab('register')">নিবন্ধন</div>
+  </div>
+
+  <div class="auth-card">
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>ইমেইল / ফোন নম্বর</label>
+        <input type="text" id="login-email" placeholder="আপনার ইমেইল লিখুন">
+      </div>
+      <div class="form-group">
+        <label>পাসওয়ার্ড</label>
+        <input type="password" id="login-pass" placeholder="পাসওয়ার্ড লিখুন" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">🔐 লগইন করুন</button>
+      <div style="margin-top:12px;text-align:center;font-size:0.82rem;color:var(--text-muted)">
+        ডেমো: <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">demo@example.com</code> / <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">123456</code>
+      </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>পুরো নাম</label>
+        <input type="text" id="reg-name" placeholder="আপনার নাম লিখুন">
+      </div>
+      <div class="form-group">
+        <label>ইমেইল</label>
+        <input type="email" id="reg-email" placeholder="ইমেইল ঠিকানা">
+      </div>
+      <div class="form-group">
+        <label>ফোন নম্বর</label>
+        <input type="tel" id="reg-phone" placeholder="+880 XXXXXXXXXX">
+      </div>
+      <div class="form-group">
+        <label>পাসওয়ার্ড</label>
+        <input type="password" id="reg-pass" placeholder="নিরাপদ পাসওয়ার্ড তৈরি করুন">
+      </div>
+      <div class="form-group">
+        <label>এলাকা</label>
+        <select id="reg-area">
+          <option value="">এলাকা নির্বাচন করুন</option>
+          <option>বরিশাল সদর</option><option>নথুল্লাবাদ</option>
+          <option>কাউনিয়া</option><option>রূপাতলী</option>
+          <option>চাঁদমারী</option><option>বগুড়া রোড</option>
+          <option>সাগরদী</option><option>বাড়িয়াল</option>
+          <option>আমানতগঞ্জ</option><option>অন্যান্য</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">✅ নিবন্ধন করুন</button>
+    </div>
+
+    <div class="gov-link">
+      <a onclick="showGovLogin()">🏛️ সরকারি কর্মকর্তা লগইন</a>
+    </div>
+  </div>
+
+</div><!-- /#auth-screen -->
+
+
+<!-- ═══════════════════════════════════════════════
+     GOV LOGIN MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="gov-login-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('gov-login-modal')">✕</button>
+    <h2>🏛️ সরকারি পোর্টাল</h2>
+    <div class="form-group">
+      <label>কর্মকর্তা আইডি</label>
+      <input type="text" id="gov-id" placeholder="GOV-XXXX">
+    </div>
+    <div class="form-group">
+      <label>পাসওয়ার্ড</label>
+      <input type="password" id="gov-pass" placeholder="পাসওয়ার্ড" onkeydown="if(event.key==='Enter')doGovLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="doGovLogin()">🔐 প্রবেশ করুন</button>
+    <div style="margin-top:12px;text-align:center">
+      <small style="color:var(--text-muted)">ডেমো: ID=<b>GOV-001</b>, পাসওয়ার্ড=<b>admin123</b></small>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     REPORT MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('report-modal')">✕</button>
+    <h2>📍 সমস্যা রিপোর্ট করুন</h2>
+    <div class="form-group">
+      <label>সমস্যার ধরন</label>
+      <select id="r-type">
+        <option value="গর্ত/পটহোল">গর্ত/পটহোল</option>
+        <option value="ভাঙা রাস্তা">ভাঙা রাস্তা</option>
+        <option value="জলাবদ্ধতা">জলাবদ্ধতা</option>
+        <option value="ভাঙা স্ট্রিটলাইট">ভাঙা স্ট্রিটলাইট</option>
+        <option value="ফাটল">ফাটল</option>
+        <option value="ড্রেন সমস্যা">ড্রেন সমস্যা</option>
+        <option value="অন্যান্য">অন্যান্য</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>বিবরণ</label>
+      <textarea id="r-desc" placeholder="সমস্যার বিস্তারিত লিখুন..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>অবস্থান (মানচিত্রে ক্লিক করে পিন করুন)</label>
+      <input type="text" id="r-location" placeholder="অক্ষাংশ, দ্রাঘিমাংশ" readonly>
+    </div>
+    <div class="form-group">
+      <label>ছবি আপলোড করুন (ঐচ্ছিক)</label>
+      <input type="file" id="r-photo" accept="image/*" onchange="previewPhoto(this)">
+      <img id="photo-preview" class="photo-preview" style="display:none" alt="ছবির প্রিভিউ">
+    </div>
+    <div class="form-group">
+      <label>প্রধান সড়কের নিকটবর্তী?</label>
+      <select id="r-major">
+        <option value="হ্যাঁ">হ্যাঁ (উচ্চ অগ্রাধিকার)</option>
+        <option value="না">না</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-primary" style="flex:1" onclick="submitReport()">📤 জমা দিন</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('report-modal')">বাতিল</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ISSUE DETAIL MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span>🛣️</span>
+      <span>FixMyStreet বরিশাল</span>
+    </div>
+
+    <div class="nav-tabs" id="main-nav-tabs">
+      <div class="nav-tab" onclick="showPage('feed-page')">🏠 ফিড</div>
+      <div class="nav-tab" onclick="showPage('map-page')">🗺️ মানচিত্র</div>
+      <div class="nav-tab" onclick="showPage('issues-page')">📋 সমস্যা</div>
+      <div class="nav-tab" id="gov-tab" style="display:none" onclick="showPage('gov-page')">🏛️ ড্যাশবোর্ড</div>
+    </div>
+
+    <div class="nav-user">
+      <span id="nav-user-name" class="nav-user-name-text" style="font-size:0.88rem;color:var(--text-muted)"></span>
+      <span id="nav-badge" class="nav-badge"></span>
+      <!-- Notification bell -->
+      <div class="notif-wrap">
+        <button id="notif-btn" onclick="toggleNotifPanel()" title="বিজ্ঞপ্তি">🔔</button>
+        <span id="notif-badge"></span>
+        <div id="notif-panel">
+          <h4>🔔 বিজ্ঞপ্তি</h4>
+          <div id="notif-list"></div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="logout()">লগআউট</button>
+    </div>
+  </nav>
+
+  <!-- ── SOCIAL FEED PAGE ── -->
+  <div id="feed-page" class="page" style="display:none">
+    <div class="feed-header">
+      <h2>🏠 সামাজিক ফিড</h2>
+      <button class="btn btn-primary btn-sm" onclick="showPage('map-page');startPinMode()">+ নতুন রিপোর্ট</button>
+    </div>
+    <div class="feed-chips">
+      <div class="feed-chip active" onclick="setFeedFilter('all',this)">সব</div>
+      <div class="feed-chip" onclick="setFeedFilter('pending',this)">অমীমাংসিত</div>
+      <div class="feed-chip" onclick="setFeedFilter('progress',this)">চলমান</div>
+      <div class="feed-chip" onclick="setFeedFilter('done',this)">সম্পন্ন</div>
+      <div class="feed-chip" onclick="setFeedFilter('গর্ত/পটহোল',this)">🕳️ পটহোল</div>
+      <div class="feed-chip" onclick="setFeedFilter('জলাবদ্ধতা',this)">🌊 জলাবদ্ধতা</div>
+    </div>
+    <div id="feed-list"></div>
+  </div>
+
+  <!-- ── MAP PAGE ── -->
+  <div id="map-page" class="page active">
+    <div class="map-toolbar">
+      <button class="btn btn-primary btn-sm" onclick="startPinMode()">📍 সমস্যা যোগ করুন</button>
+      <div class="map-hint" id="pin-hint" style="display:none">🎯 মানচিত্রে ক্লিক করুন পিন স্থাপন করতে</div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:0.8rem;color:var(--text-muted)">ফিল্টার:</span>
+        <button class="map-filter-btn active" onclick="filterMapMarkers('all')">সব</button>
+        <button class="map-filter-btn" onclick="filterMapMarkers('pending')">অমীমাংসিত</button>
+        <button class="map-filter-btn" onclick="filterMapMarkers('progress')">চলমান</button>
+        <button class="map-filter-btn" onclick="filterMapMarkers('done')">সম্পন্ন</button>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <!-- ── ISSUES LIST PAGE ── -->
+  <div id="issues-page" class="page" style="display:none">
+    <div class="page-header">
+      <h2>🚧 সমস্যার তালিকা</h2>
+      <button class="btn btn-primary btn-sm" onclick="showPage('map-page');startPinMode()">+ নতুন রিপোর্ট</button>
+    </div>
+    <div class="priority-queue-info">
+      🔢 <strong>অগ্রাধিকার সারি (Max-Heap):</strong> সর্বোচ্চ ভোট ও প্রধান সড়কের নিকটবর্তী সমস্যা সর্বপ্রথম মেরামত করা হবে।
+    </div>
+    <div class="filter-bar">
+      <div class="filter-chip active" onclick="filterIssues('all',this)">সব</div>
+      <div class="filter-chip" onclick="filterIssues('pending',this)">অমীমাংসিত</div>
+      <div class="filter-chip" onclick="filterIssues('progress',this)">চলমান</div>
+      <div class="filter-chip" onclick="filterIssues('done',this)">সম্পন্ন</div>
+      <div class="filter-chip" onclick="filterIssues('গর্ত/পটহোল',this)">গর্ত/পটহোল</div>
+      <div class="filter-chip" onclick="filterIssues('ভাঙা রাস্তা',this)">ভাঙা রাস্তা</div>
+    </div>
+    <div id="issues-list"></div>
+  </div>
+
+  <!-- ── GOVERNMENT DASHBOARD PAGE ── -->
+  <div id="gov-page" class="page" style="display:none">
+    <div class="page-header">
+      <h2>🏛️ সরকারি নিয়ন্ত্রণ প্যানেল</h2>
+    </div>
+    <div class="stats-grid" id="gov-stats"></div>
+    <div class="excel-actions">
+      <button class="btn btn-green btn-sm" onclick="downloadExcel()">📥 Excel ডাউনলোড করুন</button>
+      <button class="btn btn-blue btn-sm" onclick="renderGovTable()">🔄 রিফ্রেশ করুন</button>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th><th>অগ্রাধিকার</th><th>ধরন</th><th>বিবরণ</th>
+            <th>অবস্থান</th><th>রিপোর্টকারী</th><th>ভোট</th>
+            <th>মন্তব্য</th><th>তারিখ</th><th>ছবি</th>
+            <th>অবস্থা</th><th>মুছুন</th>
+          </tr>
+        </thead>
+        <tbody id="gov-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav" id="mobile-nav" style="display:none">
+  <button class="mobile-nav-btn active" onclick="showPage('feed-page');setMobileActive(this)">
+    <span>🏠</span>ফিড
+  </button>
+  <button class="mobile-nav-btn" onclick="showPage('map-page');setMobileActive(this)">
+    <span>🗺️</span>মানচিত্র
+  </button>
+  <button class="mobile-nav-btn" onclick="showPage('issues-page');setMobileActive(this)">
+    <span>📋</span>সমস্যা
+  </button>
+  <button class="mobile-nav-btn" id="mob-gov-btn" style="display:none" onclick="showPage('gov-page');setMobileActive(this)">
+    <span>🏛️</span>ড্যাশবোর্ড
+  </button>
+  <button class="mobile-nav-btn" onclick="logout()">
+    <span>🚪</span>লগআউট
+  </button>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPTS — load order matters:
+     1. data layer  2. auth  3. map  4. app logic
+══════════════════════════════════════════════════ -->
+<script src="data/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/map.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

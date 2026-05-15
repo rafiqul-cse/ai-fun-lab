@@ -48,24 +48,27 @@ function getTypeEmoji(type, status) {
   return type ? (map[type] || '⚠️') : (status === 'done' ? '✅' : status === 'progress' ? '🔧' : '⚠️');
 }
 
-function renderMapMarkers(filter = 'all') {
-  if (!map) return;
+async function renderMapMarkers() {
+  // 1. Clear old markers
   markersLayer.forEach(m => map.removeLayer(m));
   markersLayer = [];
-  const issues = loadIssues();
-  issues.filter(i => filter === 'all' || i.status === filter).forEach(issue => {
-    const marker = L.marker([issue.lat, issue.lng], { icon: makeIcon(issue.status, issue.votes) }).addTo(map);
-    marker.bindPopup(`
-      <div style="min-width:200px">
-        <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;color:#e85d04">${getTypeEmoji(issue.type)} ${issue.type}</div>
-        <div style="font-size:0.82rem;margin-bottom:8px;opacity:0.8;line-height:1.4">${issue.desc.slice(0,80)}${issue.desc.length>80?'…':''}</div>
-        <div style="display:flex;gap:8px;font-size:0.78rem;margin-bottom:10px">
-          <span>👤 ${issue.reporter}</span>
-          <span>👍 ${issue.votes}</span>
-        </div>
-        <button onclick="openDetail(${issue.id})" style="background:#e85d04;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-family:inherit">বিস্তারিত দেখুন</button>
-      </div>
-    `);
+
+  // 2. Fetch issues from Supabase (using the function in db.js)
+  const issues = await loadIssues(); 
+
+  // 3. Draw markers only if we have data
+  if (!issues || issues.length === 0) {
+    console.log("No issues found in Supabase yet.");
+    return;
+  }
+
+  issues.forEach(issue => {
+    // Note: Use issue.latitude/longitude based on your Supabase column names
+    const marker = L.marker([issue.lat, issue.lng], {
+      icon: makeIcon(issue.status, issue.votes || 0)
+    }).addTo(map);
+
+    // Keep your existing popup logic here...
     markersLayer.push(marker);
   });
 }
